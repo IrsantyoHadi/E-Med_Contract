@@ -1,0 +1,27 @@
+{
+  "name": "e-med_contract",
+  "version": "1.0.0",
+  "description": "Electronic Medical Record using block chain for Emurgo Class final task",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "truffle migrate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IrsantyoHadi/E-Med_Contract.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/IrsantyoHadi/E-Med_Contract/issues"
+  },
+  "homepage": "https://github.com/IrsantyoHadi/E-Med_Contract#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2"
+  }
+}
