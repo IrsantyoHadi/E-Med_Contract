@@ -10,6 +10,14 @@ contract IRSTKN is ERC20 {
     constructor(uint256 initialSupply) ERC20("IRSTKN", "IRS") {
         _mint(msg.sender, initialSupply);
     }
+
+    function approveFromContract(address _user, uint256 _amount)
+        public
+        returns (bool)
+    {
+        _approve(_user, _msgSender(), _amount);
+        return true;
+    }
 }
 
 //selling token
