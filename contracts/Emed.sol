@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.0;
+pragma solidity >=0.7.0 <0.9.0;
+
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol"; 
 
 contract Emed {
     address private owner;
-    uint256 private contractFee;
+    uint private contractFee;
     IERC20 tokenIRS;
 
     constructor(IERC20 _tokenAdd) {
@@ -49,6 +50,7 @@ contract Emed {
     event NewMedicalRecord(address patient, address doctor, uint256 date);
     event CallMedicalRecords(MedicalRecord[] _m);
     event CallAppointments(Appointment[] _a);
+    event CheckAmount(uint amount);
 
     struct MedicalRecord {
         string subjective;
@@ -68,7 +70,7 @@ contract Emed {
         DOCTOR,
         PATIENT
     }
-
+    
     enum Schedule {
         MONDAY,
         TUESDAY,
@@ -99,7 +101,7 @@ contract Emed {
     mapping(address => User) registeredUsers;
     mapping(address => Appointment[]) doctor_appointments;
     mapping(address => MedicalRecord[]) user_medicalRecords;
-    mapping(address => Schedule[]) public doctor_schedule;
+    mapping(address => Schedule []) public doctor_schedule;
 
     User[] public validDoctors;
 
@@ -116,7 +118,7 @@ contract Emed {
         )
     {
         User memory u = registeredUsers[msg.sender];
-        return (u.name, u.userType, u.doctorFee, u.walletAddress, u.active);
+        return (u.name, u.userType, u.doctorFee, u.walletAddress , u.active);
     }
 
     // for register new User
@@ -125,21 +127,22 @@ contract Emed {
         uint256 _dob,
         UserType _userType,
         uint256 _doctorFee,
-        Schedule[] memory _doctorSchedule
+        Schedule [] memory _doctorSchedule
     ) public onlyNewUser {
         User memory newUser;
         newUser.name = _name;
         newUser.dob = _dob;
         newUser.userType = _userType;
-        newUser.doctorFee = _doctorFee;
+        newUser.doctorFee = 0;
         newUser.active = true;
         newUser.walletAddress = msg.sender;
         if (_userType == UserType.DOCTOR) {
             newUser.active = false;
+            newUser.doctorFee = _doctorFee;
             doctor_schedule[msg.sender] = _doctorSchedule;
         }
         registeredUsers[msg.sender] = newUser;
-
+        tokenIRS.approve(msg.sender,100000);
         emit NewLog(msg.sender, block.timestamp, "register user");
     }
 
@@ -155,10 +158,12 @@ contract Emed {
         address _doctorAddress,
         uint256 _examDate,
         Schedule _examSchedule
-    ) public onlyPatient returns (uint256) {
+    ) public onlyPatient returns(uint) {
+        
         // find doctor to get fee
         User memory doctor = registeredUsers[_doctorAddress];
-
+        emit CheckAmount(doctor.doctorFee);
+        
         Appointment memory newAppointment;
         newAppointment.doctorAddress = _doctorAddress;
         newAppointment.examDate = _examDate;
@@ -166,42 +171,23 @@ contract Emed {
         newAppointment.totalFee = doctor.doctorFee;
         newAppointment.patientAddress = msg.sender;
         newAppointment.active = true;
-        require(
-            tokenIRS.transferFrom(
-                msg.sender,
-                address(this),
-                doctor.doctorFee
-            ) == true,
-            "Appointment not proceed!"
-        );
+        require(tokenIRS.transferFrom(msg.sender, address(this), doctor.doctorFee) == true, "Appointment not proceed!");
         doctor_appointments[_doctorAddress].push(newAppointment);
         emit NewLog(msg.sender, block.timestamp, "create appointment");
         return doctor_appointments[_doctorAddress].length;
     }
-
-    function cancelAppointment(address _doctorAddress, uint256 _ticketNumber)
-        public
-        onlyPatient
-    {
-        require(
-            _ticketNumber - 1 < doctor_appointments[_doctorAddress].length,
-            "Wrong ticket number"
-        );
-        require(
-            doctor_appointments[_doctorAddress][_ticketNumber - 1 - 1]
-                .patientAddress == msg.sender,
-            "Thats Ticket is not yours"
-        );
+    
+    function cancelAppointment(address _doctorAddress , uint _ticketNumber) public onlyPatient {
+        require(_ticketNumber-1 < doctor_appointments[_doctorAddress].length, "Wrong ticket number");
+        require(doctor_appointments[_doctorAddress][_ticketNumber-1].patientAddress == msg.sender, "Thats Ticket is not yours");
         // find doctor to get fee
         User memory doctor = registeredUsers[_doctorAddress];
-        require(
-            tokenIRS.transfer(msg.sender, doctor.doctorFee - contractFee) ==
-                true,
-            "Something Error with fee transfer"
-        );
-        doctor_appointments[_doctorAddress][_ticketNumber - 1].active = false;
+        emit CheckAmount(doctor.doctorFee);
+        uint deductFee = doctor.doctorFee - contractFee;
+        require(tokenIRS.transfer(msg.sender, deductFee) == true, "Something Error with fee transfer");
+        doctor_appointments[_doctorAddress][_ticketNumber-1].active = false;
     }
-
+    
     function getPatientList() public onlyDoctor returns (Appointment[] memory) {
         emit CallAppointments(doctor_appointments[msg.sender]);
         return doctor_appointments[msg.sender];
@@ -234,16 +220,15 @@ contract Emed {
         newMedicalRecord.doctorAddress = msg.sender;
         user_medicalRecords[_patientAddress].push(newMedicalRecord);
 
+        
         // find doctor to get fee
         User memory doctor = registeredUsers[msg.sender];
-
+        
         // deduct fee for contract owner
-        uint256 amountPayedToDoctor = doctor.doctorFee - contractFee;
-        require(
-            tokenIRS.transfer(msg.sender, amountPayedToDoctor) == true,
-            "Payment not proceed!"
-        );
-
+        uint amountPayedToDoctor = doctor.doctorFee - contractFee;
+        emit CheckAmount(amountPayedToDoctor);
+        require(tokenIRS.transfer(msg.sender, amountPayedToDoctor) == true, "Payment not proceed!");
+        
         emit NewMedicalRecord(_patientAddress, msg.sender, block.timestamp);
     }
 
@@ -264,8 +249,8 @@ contract Emed {
         emit CallMedicalRecords(user_medicalRecords[msg.sender]);
         return user_medicalRecords[msg.sender];
     }
-
-    function setContractFee(uint256 _fee) public onlyOwner {
+    
+    function setContractFee(uint _fee) public onlyOwner {
         contractFee = _fee;
     }
 }
