@@ -166,7 +166,7 @@ export default function RegistrationForm({ getDataToSend }) {
             <Form.Check
               type="checkbox"
               label="Friday"
-              value="firday"
+              value="friday"
               checked={sched.friday}
               onChange={handleChecked}
             />

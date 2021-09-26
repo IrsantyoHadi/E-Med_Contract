@@ -204,6 +204,7 @@ contract Emed {
             tokenIRS.transfer(msg.sender, deductFee) == true,
             "Something Error with fee transfer"
         );
+        require(doctor_appointments[_doctorAddress][_ticketNumber - 1].active == true, 'Ticket already cancel');
         doctor_appointments[_doctorAddress][_ticketNumber - 1].active = false;
     }
 
