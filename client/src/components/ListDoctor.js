@@ -91,7 +91,7 @@ export default function ListDoctor({ drizzle, drizzleState }) {
             .call();
         })
         .then((dataAntrian) => {
-          alert(`Ini Nomer Antrian Anda ${dataAntrian}`);
+          alert(`Ini Nomer Antrian Anda ${dataAntrian-1}`);
           setModalShow(false);
         });
     }

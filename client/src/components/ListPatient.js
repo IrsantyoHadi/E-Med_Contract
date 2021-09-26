@@ -101,13 +101,13 @@ export default function ListPatient({ drizzle, drizzleState }) {
 function MyVerticallyCenteredModal(props) {
   const { patientAddress, emed } = props;
   const [detail, setDetail] = useState({
-    name: 'irsan',
-    dob: '23 agustus 1991',
+    name: '',
+    dob: '',
   });
   const [medicalRecord, setMedicalRecord] = useState([]);
 
   useEffect(() => {
-    // getDetailPatient();
+    getDetailPatient();
     getMedicalRecord();
   }, [patientAddress]);
 
