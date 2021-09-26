@@ -204,12 +204,17 @@ contract Emed {
             tokenIRS.transfer(msg.sender, deductFee) == true,
             "Something Error with fee transfer"
         );
+        require(doctor_appointments[_doctorAddress][_ticketNumber - 1].active == true, 'Ticket already cancel');
         doctor_appointments[_doctorAddress][_ticketNumber - 1].active = false;
     }
 
     function getPatientList() public onlyDoctor returns (Appointment[] memory) {
         emit CallAppointments(doctor_appointments[msg.sender]);
         return doctor_appointments[msg.sender];
+    }
+
+    function getPatientDetail(address _patientAddress) public view onlyDoctor returns (User memory){
+        return registeredUsers[_patientAddress];
     }
 
     function addMedicalRecord(
