@@ -212,6 +212,10 @@ contract Emed {
         return doctor_appointments[msg.sender];
     }
 
+    function getPatientDetail(address _patientAddress) public view onlyDoctor returns (User memory){
+        return registeredUsers[_patientAddress];
+    }
+
     function addMedicalRecord(
         address _patientAddress,
         string memory _subjective,
