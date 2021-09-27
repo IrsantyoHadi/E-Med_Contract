@@ -10,6 +10,11 @@ To Run this project you need truffle in your local machine, and ganache for test
 npm run migrate
 ```
 
+For run the react client you can run 
+```bash
+npm run start
+```
+
 ## Application Flow
 
 Basically the flow is patient registration to the doctor and then the doctor do the examination and save the electronic medical record in Ethereum Blockchain.
