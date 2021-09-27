@@ -190,7 +190,21 @@ function MyVerticallyCenteredModal(props) {
                 }}>
                 <h4>Last Exam : {records.examLocation}</h4>
                 {Object.entries(records).map((el) => {
-                  if (el[0] !== 'examLocation') {
+                  if (
+                    el[0] !== 'examLocation' &&
+                    el[0] !== 'doctorAddress' &&
+                    el[0] !== '0' &&
+                    el[0] !== '1' &&
+                    el[0] !== '2' &&
+                    el[0] !== '3' &&
+                    el[0] !== '4' &&
+                    el[0] !== '5' &&
+                    el[0] !== '6' &&
+                    el[0] !== '7' &&
+                    el[0] !== '8' &&
+                    el[0] !== '9' &&
+                    el[0] !== '10'
+                  ) {
                     return (
                       <p>
                         {el[0]} = {el[1]}
