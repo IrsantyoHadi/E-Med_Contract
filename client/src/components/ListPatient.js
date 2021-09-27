@@ -49,7 +49,7 @@ export default function ListPatient({ drizzle, drizzleState }) {
           };
         });
 
-        setDataPatients(dataToShow);
+        setDataPatients(dataToShow.reverse());
       });
   };
 
@@ -157,7 +157,9 @@ function MyVerticallyCenteredModal(props) {
       .doctorGetMedicalRecords(patientAddress)
       .call()
       .then((data) => {
-        setMedicalRecord(data);
+        console.log(data, 'ini datanya');
+        let reverseArray = [...data].reverse();
+        setMedicalRecord(reverseArray);
       });
   };
 
