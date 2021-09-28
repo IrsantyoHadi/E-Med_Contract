@@ -275,6 +275,11 @@ function MyVerticallyCenteredModal2(props) {
       })
       .then((data) => {
         props.onHide();
+        alert('Success');
+      })
+      .catch((err) => {
+        props.onHide();
+        alert('Error');
       });
   };
   const formDetails = [

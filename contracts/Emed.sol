@@ -95,10 +95,11 @@ contract Emed {
         bool active;
     }
 
-    mapping(address => User) registeredUsers;
+    mapping(address => User) public registeredUsers;
     mapping(address => Appointment[]) doctor_appointments;
     mapping(address => MedicalRecord[]) user_medicalRecords;
     mapping(address => Schedule[]) public doctor_schedule;
+    mapping(address => bool) patientExamStatus;
 
     User[] public validDoctors;
 
@@ -134,6 +135,7 @@ contract Emed {
         newUser.active = true;
         newUser.walletAddress = msg.sender;
         if (_userType == UserType.DOCTOR) {
+            require(_doctorFee > contractFee, "Insert Higher Doctor Fee");
             newUser.active = false;
             newUser.doctorFee = _doctorFee;
             doctor_schedule[msg.sender] = _doctorSchedule;
@@ -180,6 +182,7 @@ contract Emed {
         );
         doctor_appointments[_doctorAddress].push(newAppointment);
         emit NewLog(msg.sender, block.timestamp, "create appointment");
+        patientExamStatus[msg.sender] = true;
         return doctor_appointments[_doctorAddress].length;
     }
 
@@ -209,6 +212,7 @@ contract Emed {
                 true,
             "Ticket already cancel"
         );
+        patientExamStatus[msg.sender] = false;
         doctor_appointments[_doctorAddress][_ticketNumber - 1].active = false;
     }
 
@@ -232,13 +236,21 @@ contract Emed {
         string memory _objective,
         string memory _assesment,
         string memory _planning,
-        uint256 _weight,
-        uint256 _height,
-        uint256 _systole,
-        uint256 _diastole,
+        uint8 _weight,
+        uint8 _height,
+        uint8 _systole,
+        uint8 _diastole,
         uint256 _examDate,
         string memory _examLocation
     ) public onlyDoctor {
+        //this one is for chec if Patient is In Examination Prosess to prevent doctor do multiple adding
+        require(
+            patientExamStatus[_patientAddress] == true,
+            "Patient not in Exam Proses"
+        );
+        // after the condition pass status became false due the end of Examination proses
+        patientExamStatus[_patientAddress] = false;
+
         MedicalRecord memory newMedicalRecord;
         newMedicalRecord.subjective = _subjective;
         newMedicalRecord.objective = _objective;
@@ -258,12 +270,10 @@ contract Emed {
 
         // deduct fee for contract owner
         uint256 amountPayedToDoctor = doctor.doctorFee - contractFee;
-        emit CheckAmount(amountPayedToDoctor);
         require(
             tokenIRS.transfer(msg.sender, amountPayedToDoctor) == true,
             "Payment not proceed!"
         );
-
         emit NewMedicalRecord(_patientAddress, msg.sender, block.timestamp);
     }
 
