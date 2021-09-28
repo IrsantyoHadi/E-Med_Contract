@@ -157,7 +157,6 @@ function MyVerticallyCenteredModal(props) {
       .doctorGetMedicalRecords(patientAddress)
       .call()
       .then((data) => {
-        console.log(data, 'ini datanya');
         let reverseArray = [...data].reverse();
         setMedicalRecord(reverseArray);
       });

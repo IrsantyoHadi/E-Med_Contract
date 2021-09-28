@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import { Container, Button, Alert } from 'react-bootstrap';
+import { Container, Button, Modal } from 'react-bootstrap';
 import Header from '../components/Header';
 import ListDoctor from '../components/ListDoctor';
 import ListPatient from '../components/ListPatient';
@@ -12,6 +12,23 @@ function StartingPage({ drizzle, drizzleState }) {
   const history = useHistory();
   const irsToken = drizzle.contracts.IRSTKN;
   const emed = drizzle.contracts.Emed;
+  const [medicalRecord, setMedicalRecord] = useState([]);
+  const [modalShow, setModalShow] = useState(false);
+
+  const getMedicalRecord = async () => {
+    emed.methods
+      .userGetOwnMedicalRecords()
+      .call()
+      .then((data) => {
+        let reverseArray = [...data].reverse();
+        setMedicalRecord(reverseArray);
+      });
+  };
+
+  const handleClick = () => {
+    getMedicalRecord();
+    setModalShow(true);
+  };
 
   useEffect(() => {
     emed.methods
@@ -73,12 +90,69 @@ function StartingPage({ drizzle, drizzleState }) {
           </>
         )}
         {user && user.userType === '1' && (
-          <ListDoctor drizzle={drizzle} drizzleState={drizzleState} />
+          <>
+            <Button style={{ marginBottom: 20 }} onClick={handleClick}>
+              My Record
+            </Button>
+            <ListDoctor drizzle={drizzle} drizzleState={drizzleState} />
+          </>
         )}
         {user && user.userType === '0' && (
           <ListPatient drizzle={drizzle} drizzleState={drizzleState} />
         )}
       </Container>
+      {modalShow && (
+        <Modal
+          show={modalShow}
+          onHide={() => setModalShow(false)}
+          backdrop="static"
+          size="lg"
+          aria-labelledby="contained-modal-title-vcenter"
+          centered>
+          <Modal.Header closeButton>
+            <Modal.Title id="contained-modal-title-vcenter">
+              Medical Record
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {medicalRecord.map((records) => {
+              return (
+                <div
+                  style={{
+                    borderWidth: 1,
+                    borderColor: 'gray',
+                    borderStyle: 'solid',
+                  }}>
+                  <h4>Last Exam : {records.examLocation}</h4>
+                  {Object.entries(records).map((el) => {
+                    if (
+                      el[0] !== 'examLocation' &&
+                      el[0] !== 'doctorAddress' &&
+                      el[0] !== '0' &&
+                      el[0] !== '1' &&
+                      el[0] !== '2' &&
+                      el[0] !== '3' &&
+                      el[0] !== '4' &&
+                      el[0] !== '5' &&
+                      el[0] !== '6' &&
+                      el[0] !== '7' &&
+                      el[0] !== '8' &&
+                      el[0] !== '9' &&
+                      el[0] !== '10'
+                    ) {
+                      return (
+                        <p>
+                          {el[0]} = {el[1]}
+                        </p>
+                      );
+                    }
+                  })}
+                </div>
+              );
+            })}
+          </Modal.Body>
+        </Modal>
+      )}
     </>
   );
 }
