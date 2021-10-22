@@ -1,12 +1,18 @@
 /* eslint-disable no-loop-func */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, Button, Modal, Form } from 'react-bootstrap';
 
-export default function ListPatient({ drizzle, drizzleState }) {
+import { addNew, getData } from '../utils/firebase';
+import MsgFrom from './ChatBox/from';
+import MsgTo from './ChatBox/to';
+
+export default function ListPatient({ drizzle, drizzleState, doctorAddress }) {
   const [dataPatients, setDataPatients] = useState([]);
+  const [patient, setPatient] = useState(null);
   const [patientAddress, setPatientAddress] = useState(null);
   const [modalShow, setModalShow] = useState(false);
   const [modalShow2, setModalShow2] = useState(false);
+  const [modalShow3, setModalShow3] = useState(false);
   const emed = drizzle.contracts.Emed;
 
   useEffect(() => {
@@ -19,33 +25,9 @@ export default function ListPatient({ drizzle, drizzleState }) {
       .call()
       .then((data) => {
         let dataToShow = data.map((el) => {
-          let examSchedule;
-          switch (el.examSchedule) {
-            case '0':
-              examSchedule = 'monday';
-              break;
-            case '1':
-              examSchedule = 'tuesday';
-              break;
-            case '2':
-              examSchedule = 'wednesday';
-              break;
-            case '3':
-              examSchedule = 'thursday';
-              break;
-            case '4':
-              examSchedule = 'friday';
-              break;
-            case '5':
-              examSchedule = 'saturday';
-              break;
-            default:
-              break;
-          }
           return {
-            examSchedule,
             patientAddress: el.patientAddress,
-            active: el.active,
+            active: el.active
           };
         });
 
@@ -59,16 +41,31 @@ export default function ListPatient({ drizzle, drizzleState }) {
         if (patient.active) {
           return (
             <>
-              <Card key={idx}>
+              <Card
+                style={{
+                  maxHeight: 145,
+                  width: 264,
+                  marginLeft: 15,
+                  marginBottom: 10
+                }}
+                key={idx}
+              >
                 <Card.Body>
-                  <Card.Title>{patient.patientAddress}</Card.Title>
-                  <Card.Text>Scheduled for : {patient.examSchedule}</Card.Text>
+                  <Card.Text>
+                    {' '}
+                    <p style={{ fontSize: 14, color: 'gray' }}>
+                      {' '}
+                      Patient ID : {patient.patientAddress}{' '}
+                    </p>
+                  </Card.Text>
                   <Button
                     onClick={() => {
                       setPatientAddress(patient.patientAddress);
                       setModalShow(true);
-                    }}>
-                    DETAIL
+                    }}
+                    style={{ backgroundColor: '#3A86FF', width: '100%' }}
+                  >
+                    Detail Patient
                   </Button>
                 </Card.Body>
               </Card>
@@ -77,16 +74,18 @@ export default function ListPatient({ drizzle, drizzleState }) {
         }
       })}
       {modalShow && (
-        <MyVerticallyCenteredModal
+        <DataPatientModal
           show={modalShow}
           onHide={() => setModalShow(false)}
           patientAddress={patientAddress}
           emed={emed}
           modalShow2={() => setModalShow2(true)}
+          modalShow3={() => setModalShow3(true)}
+          setPatient={setPatient}
         />
       )}
       {modalShow2 && (
-        <MyVerticallyCenteredModal2
+        <AddMedicalRecordModal
           show={modalShow2}
           onHide={() => setModalShow2(false)}
           patientAddress={patientAddress}
@@ -94,15 +93,24 @@ export default function ListPatient({ drizzle, drizzleState }) {
           drizzleState={drizzleState}
         />
       )}
+      {modalShow3 && (
+        <ChatModal
+          show={modalShow}
+          onHide={() => setModalShow3(false)}
+          patientAddress={patientAddress}
+          doctorAddress={doctorAddress}
+          patient={patient}
+        />
+      )}
     </>
   );
 }
 
-function MyVerticallyCenteredModal(props) {
-  const { patientAddress, emed } = props;
+function DataPatientModal(props) {
+  const { patientAddress, emed, setPatient } = props;
   const [detail, setDetail] = useState({
     name: '',
-    dob: '',
+    dob: ''
   });
   const [medicalRecord, setMedicalRecord] = useState([]);
 
@@ -125,16 +133,13 @@ function MyVerticallyCenteredModal(props) {
       'Sep',
       'Oct',
       'Nov',
-      'Dec',
+      'Dec'
     ];
     var year = a.getFullYear();
     var month = months[a.getMonth()];
     var date = a.getDate();
-    var hour = a.getHours();
-    var min = a.getMinutes();
-    var sec = a.getSeconds();
-    var time =
-      date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec;
+
+    var time = date + ' ' + month + ' ' + year;
     return time;
   };
 
@@ -145,9 +150,9 @@ function MyVerticallyCenteredModal(props) {
       .then((data) => {
         let dataWanted = {
           name: data.name,
-          dob: timeConverter(data.dob),
+          dob: timeConverter(data.dob)
         };
-
+        setPatient(dataWanted);
         setDetail(dataWanted);
       });
   };
@@ -168,7 +173,8 @@ function MyVerticallyCenteredModal(props) {
       backdrop="static"
       size="lg"
       aria-labelledby="contained-modal-title-vcenter"
-      centered>
+      centered
+    >
       <Modal.Header closeButton>
         <Modal.Title id="contained-modal-title-vcenter">
           Patient Detail
@@ -181,38 +187,24 @@ function MyVerticallyCenteredModal(props) {
       {medicalRecord.length > 0 && (
         <Modal.Body>
           <h3> Medical Records </h3>
-          {medicalRecord.map((records) => {
+          {medicalRecord.map((record) => {
             return (
               <div
                 style={{
                   borderWidth: 1,
                   borderColor: 'gray',
                   borderStyle: 'solid',
-                }}>
-                <h4>Last Exam : {records.examLocation}</h4>
-                {Object.entries(records).map((el) => {
-                  if (
-                    el[0] !== 'examLocation' &&
-                    el[0] !== 'doctorAddress' &&
-                    el[0] !== '0' &&
-                    el[0] !== '1' &&
-                    el[0] !== '2' &&
-                    el[0] !== '3' &&
-                    el[0] !== '4' &&
-                    el[0] !== '5' &&
-                    el[0] !== '6' &&
-                    el[0] !== '7' &&
-                    el[0] !== '8' &&
-                    el[0] !== '9' &&
-                    el[0] !== '10'
-                  ) {
-                    return (
-                      <p>
-                        {el[0]} = {el[1]}
-                      </p>
-                    );
-                  }
-                })}
+                  padding: 10
+                }}
+              >
+                <h5>Examination Date : {timeConverter(record.examDate)}</h5>
+                <ul>
+                  <li>Doctor Name : {record.doctorName}</li>
+                  <li>Subjective : {record.subjective}</li>
+                  <li>Assesment : {record.assesment}</li>
+                  <li>Planning : {record.planning}</li>
+                  <li>Doctor Notes: {record.doctor_notes} </li>
+                </ul>
               </div>
             );
           })}
@@ -222,9 +214,17 @@ function MyVerticallyCenteredModal(props) {
       <Modal.Footer>
         <Button
           onClick={() => {
+            props.modalShow3();
+          }}
+        >
+          Start Chat
+        </Button>
+        <Button
+          onClick={() => {
             props.onHide();
             props.modalShow2();
-          }}>
+          }}
+        >
           Add New Medical Record
         </Button>
       </Modal.Footer>
@@ -232,8 +232,14 @@ function MyVerticallyCenteredModal(props) {
   );
 }
 
-function MyVerticallyCenteredModal2(props) {
+function AddMedicalRecordModal(props) {
   const { patientAddress, emed, drizzleState } = props;
+  //       address _patientAddress,
+  //       string memory _subjective,
+  //       string memory _assesment,
+  //       string memory _planning,
+  //       string memory _doctorNotes,
+  //       uint256 _examDate
   const addMedicalRecord = async (e) => {
     e.preventDefault();
     let dataToSend = {};
@@ -244,34 +250,18 @@ function MyVerticallyCenteredModal2(props) {
       }
     }
     dataToSend.date = new Date(dataToSend.date).getTime() / 1000;
-    const {
-      subject,
-      object,
-      assessment,
-      planning,
-      weight,
-      height,
-      systole,
-      diastole,
-      date,
-      location,
-    } = dataToSend;
+    const { subject, assessment, planning, date, doctorNotes } = dataToSend;
     emed.methods
       .addMedicalRecord(
         patientAddress,
         subject,
-        object,
         assessment,
         planning,
-        +weight,
-        +height,
-        +systole,
-        +diastole,
-        date,
-        location
+        doctorNotes,
+        date
       )
       .send({
-        from: drizzleState.accounts[0],
+        from: drizzleState.accounts[0]
       })
       .then((data) => {
         props.onHide();
@@ -285,45 +275,25 @@ function MyVerticallyCenteredModal2(props) {
   const formDetails = [
     {
       label: 'Subject',
-      controlId: 'subject',
-    },
-    {
-      label: 'Object',
-      controlId: 'object',
+      controlId: 'subject'
     },
     {
       label: 'Assessment',
-      controlId: 'assessment',
+      controlId: 'assessment'
     },
     {
       label: 'Planning',
-      controlId: 'planning',
+      controlId: 'planning'
     },
     {
-      label: 'Weight',
-      controlId: 'weight',
-    },
-    {
-      label: 'Height',
-      controlId: 'height',
-    },
-    {
-      label: 'Systole',
-      controlId: 'systole',
-    },
-    {
-      label: 'Diastole',
-      controlId: 'diastole',
+      label: 'Doctor Notes',
+      controlId: 'doctorNotes'
     },
     {
       label: 'Date',
       controlId: 'date',
-      type: 'date',
-    },
-    {
-      label: 'Location',
-      controlId: 'location',
-    },
+      type: 'date'
+    }
   ];
 
   return (
@@ -332,7 +302,8 @@ function MyVerticallyCenteredModal2(props) {
       backdrop="static"
       size="lg"
       aria-labelledby="contained-modal-title-vcenter"
-      centered>
+      centered
+    >
       <Modal.Header closeButton>
         <Modal.Title id="contained-modal-title-vcenter">
           Add new Medical Record
@@ -353,6 +324,96 @@ function MyVerticallyCenteredModal2(props) {
           <Button type="submit">Submit</Button>
         </Modal.Footer>
       </Form>
+    </Modal>
+  );
+}
+
+function ChatModal(props) {
+  const { doctorAddress, patientAddress, patient } = props;
+  const [messages, setMessage] = useState([]);
+  const [msg, setMsg] = useState('');
+  const endMessage = useRef();
+
+  useEffect(() => {
+    getData(setMessage, `${doctorAddress}${patientAddress}`);
+  }, []);
+
+  useEffect(() => {
+    if (endMessage.current) {
+      scrollToBottom();
+    }
+  }, [messages]);
+
+  const handleSubmit = () => {
+    addNew(msg, doctorAddress, `${doctorAddress}${patientAddress}`);
+    setMsg('');
+    scrollToBottom();
+  };
+
+  const scrollToBottom = () => {
+    endMessage.current.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <Modal
+      {...props}
+      backdrop="static"
+      aria-labelledby="contained-modal-title-vcenter"
+      scrollable={true}
+      size="xl"
+      style={{ height: '80vh' }}
+    >
+      <Modal.Header closeButton>
+        <Modal.Title id="contained-modal-title-vcenter">
+          <div
+            style={{
+              padding: 10,
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <div style={{ marginLeft: 30 }}>
+              <p>{patient.name}</p>
+            </div>
+          </div>
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          paddingBottom: 10
+        }}
+      >
+        {messages.map((msg) => {
+          if (msg.from === patientAddress) {
+            return <MsgFrom message={msg.message} />;
+          }
+          return <MsgTo message={msg.message} />;
+        })}
+        <div ref={endMessage} />
+      </Modal.Body>
+      <Modal.Footer style={{ display: 'flex', flexDirection: 'row' }}>
+        <input
+          style={{ flex: 11, borderRadius: 5, borderColor: 'gray' }}
+          placeholder="Enter Your Message"
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSubmit();
+            }
+          }}
+        />
+        <button
+          style={{ flex: 1, backgroundColor: '#3A86FF', borderRadius: 5 }}
+          onClick={handleSubmit}
+        >
+          Send
+        </button>
+      </Modal.Footer>
     </Modal>
   );
 }

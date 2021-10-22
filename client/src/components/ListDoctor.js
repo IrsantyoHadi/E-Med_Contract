@@ -1,13 +1,15 @@
 /* eslint-disable no-loop-func */
-import React, { useEffect, useState } from "react";
-import { Card, Button, Modal, Form, Container } from "react-bootstrap";
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, Button, Modal, Form, Container } from 'react-bootstrap';
+import dokter from '../public/image/dokterindia.png';
+import { addNew, getData } from '../utils/firebase';
+import MsgFrom from './ChatBox/from';
+import MsgTo from './ChatBox/to';
 
-export default function ListDoctor({ drizzle, drizzleState }) {
+export default function ListDoctor({ drizzle, drizzleState, patientAddress }) {
   const [dataDoctors, setDataDoctors] = useState([]);
-  const [doctorSchedule, setDoctorSchedule] = useState(null);
-  const [doctorAlamat, setDoctorAddress] = useState(null);
   const [modalShow, setModalShow] = useState(false);
-  const [ticket,setTicketNumeber] = useState(0);
+  const [doctor, setDoctor] = useState(null);
   const emed = drizzle.contracts.Emed;
   useEffect(() => {
     getDataDoctors();
@@ -22,13 +24,11 @@ export default function ListDoctor({ drizzle, drizzleState }) {
         .validDoctors(counter)
         .call()
         .then(async (data) => {
-          let schedule = await getSchedule(data.walletAddress);
           dataDoctor = data;
           dataWanted.push({
             name: data.name,
             fee: data.doctorFee,
-            walletAddress: data.walletAddress,
-            schedule,
+            walletAddress: data.walletAddress
           });
           counter++;
         })
@@ -39,82 +39,27 @@ export default function ListDoctor({ drizzle, drizzleState }) {
     } while (dataDoctor);
   };
 
-  const getSchedule = async (doctorAddress) => {
-    let schedule = [];
-    let counter = 0;
-    let flag;
-    do {
-      await emed.methods
-        .doctor_schedule(doctorAddress, counter)
-        .call()
-        .then((data) => {
-          flag = data;
-          schedule.push(data);
-          counter++;
-        })
-        .catch((err) => {
-          flag = false;
-        });
-    } while (flag);
-
-    schedule = schedule.map((el) => {
-      switch (el) {
-        case "0":
-          return "Monday";
-        case "1":
-          return "Tuesday";
-        case "2":
-          return "Wednesday";
-        case "3":
-          return "Thursday";
-        case "4":
-          return "Friday";
-        case "5":
-          return "Saturday";
-        default:
-          return "";
-      }
-    });
-    return schedule.join(",");
+  const createNewChatRoom = async (doctorAddress) => {
+    addNew(
+      'Halo, selamat datang di XELLDOC',
+      doctorAddress,
+      `${doctorAddress}${patientAddress}`
+    );
   };
 
-  const createAppointment = async (data) => {
-    if (data) {
-      let examDate = Math.round(new Date().getTime() / 1000);
-      emed.methods
-        .createAppointment(doctorAlamat, examDate, data)
-        .send({
-          from: drizzleState.accounts[0],
-        })
-        .then(() => {
-          return emed.methods
-            .createAppointment(doctorAlamat, examDate, data)
-            .call();
-        })
-        .then((dataAntrian) => {
-          alert(`Ini Nomer Antrian Anda ${dataAntrian - 1}`);
-          setModalShow(false);
-        });
-    }
-  };
-
-  const cancelAppointment = async (data) => {
-    // console.log(ticket)
-    if(ticket == 0){
-      alert('Input your ticket number')
-    }else{
-      emed.methods
-        .cancelAppointment(data, +ticket)
-        .send({
-          from: drizzleState.accounts[0],
-        })
-        .then((data) => {
-          alert("success cancel appoinment");
-        })
-        .catch(err=>{
-          alert("ticket already canceled")
-        })
-    }
+  const createAppointment = async (doctorAddress) => {
+    emed.methods
+      .createAppointment(doctorAddress)
+      .send({
+        from: drizzleState.accounts[0]
+      })
+      .then(() => {
+        createNewChatRoom(doctorAddress);
+        setModalShow(true);
+      })
+      .catch((err) => {
+        console.log(err, 'INI ADA ERROR');
+      });
   };
 
   return (
@@ -122,89 +67,145 @@ export default function ListDoctor({ drizzle, drizzleState }) {
       {dataDoctors.map((doctor, idx) => {
         return (
           <>
-            <Card key={doctor.walletAddress}>
-              <Card.Body>
+            <Card
+              style={{
+                maxHeight: 293,
+                width: 264,
+                marginLeft: 15,
+                marginBottom: 10
+              }}
+              key={doctor.walletAddress}
+            >
+              <Card.Body
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <div style={{ marginBottom: 5 }}>
+                  <img alt="dokter" src={dokter} />
+                </div>
                 <Card.Title>{doctor.name}</Card.Title>
-                <Card.Text>Doctor Fee : {doctor.fee}</Card.Text>
-                <Card.Text>Doctor Schedule : {doctor.schedule}</Card.Text>
+                <Card.Text>General Practicioner</Card.Text>
+                <Card.Text>Consultation Fee : {doctor.fee}</Card.Text>
                 <Button
                   onClick={() => {
-                    setModalShow(true);
-                    setDoctorSchedule(doctor.schedule);
-                    setDoctorAddress(doctor.walletAddress);
+                    createAppointment(doctor.walletAddress);
+                    setDoctor(doctor);
+                  }}
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#3A86FF'
                   }}
                 >
-                  Create Appointment
+                  Start Consultation
                 </Button>
-                <Card.Footer style={{width : 400}} >
-                  <Container >
-                  <Form.Group className="mb-3" controlId="name">
-                    <Form.Label>Ticket Number</Form.Label>
-                    <Form.Control min={0} value={ticket} type="number" placeholder="Enter Ticket Number" onChange={(e)=>setTicketNumeber(e.target.value)} />
-                  </Form.Group>
-                    <Button
-                      onClick={() => {
-                        cancelAppointment(doctor.walletAddress);
-                      }}
-                    >
-                      Cancel Appointment
-                    </Button>
-                  <Form>
-                  </Form>
-                  </Container>
-                </Card.Footer>
               </Card.Body>
             </Card>
           </>
         );
       })}
       {modalShow && (
-        <MyVerticallyCenteredModal
+        <ChatModal
           show={modalShow}
           onHide={() => setModalShow(false)}
-          createAppointment={createAppointment}
-          schedule={doctorSchedule}
+          patientAddress={patientAddress}
+          doctorAddress={doctor.walletAddress}
+          doctor={doctor}
         />
       )}
     </>
   );
 }
 
-function MyVerticallyCenteredModal(props) {
-  const [day, setDay] = useState(null);
+function ChatModal(props) {
+  const { doctorAddress, patientAddress, doctor } = props;
+  const [messages, setMessage] = useState([]);
+  const [msg, setMsg] = useState('');
+  const endMessage = useRef();
+
+  useEffect(() => {
+    getData(setMessage, `${doctorAddress}${patientAddress}`);
+  }, []);
+
+  useEffect(() => {
+    if (endMessage.current) {
+      scrollToBottom();
+    }
+  }, [messages]);
+
+  const handleSubmit = () => {
+    addNew(msg, patientAddress, `${doctorAddress}${patientAddress}`);
+    setMsg('');
+    scrollToBottom();
+  };
+
+  const scrollToBottom = () => {
+    endMessage.current.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <Modal
       {...props}
       backdrop="static"
-      size="lg"
       aria-labelledby="contained-modal-title-vcenter"
-      centered
+      scrollable={true}
+      size="xl"
+      style={{ height: '80vh' }}
     >
       <Modal.Header closeButton>
         <Modal.Title id="contained-modal-title-vcenter">
-          Create New Appointment
+          <div
+            style={{
+              padding: 10,
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <img alt="dokter" src={dokter} height={56} width={56} />
+            <div style={{ marginLeft: 30 }}>
+              <p>{doctor.name}</p>
+            </div>
+          </div>
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body>
-        <Form>
-          <Form.Group className="mb-3" controlId="name">
-            <Form.Label>Schedule</Form.Label>
-            <Form.Select
-              onChange={(e) => {
-                setDay(e.target.value);
-              }}
-              aria-label="Default select example"
-            >
-              <option>Select Avalaible Day</option>
-              {props.schedule.split(",").map((day, idx) => (
-                <option value={idx + 1}>{day}</option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </Form>
+      <Modal.Body
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          paddingBottom: 10
+        }}
+      >
+        {messages.map((msg) => {
+          if (msg.from === doctorAddress) {
+            return <MsgFrom message={msg.message} />;
+          }
+          return <MsgTo message={msg.message} />;
+        })}
+        <div ref={endMessage} />
       </Modal.Body>
-      <Modal.Footer>
-        <Button onClick={() => props.createAppointment(day)}>Book!</Button>
+      <Modal.Footer style={{ display: 'flex', flexDirection: 'row' }}>
+        <input
+          style={{ flex: 11, borderRadius: 5, borderColor: 'gray' }}
+          placeholder="Enter Your Message"
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSubmit();
+            }
+          }}
+        />
+        <button
+          style={{ flex: 1, backgroundColor: '#3A86FF', borderRadius: 5 }}
+          onClick={handleSubmit}
+        >
+          Send
+        </button>
       </Modal.Footer>
     </Modal>
   );

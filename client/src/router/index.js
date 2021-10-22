@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 import StartingPage from '../pages/StartingPage';
 import RegistrationPage from '../pages/RegistrationPage';
+import ListPage from '../pages/ListPage';
+import '../public/styles/overview.css';
 
 export default function BasicRoute({ drizzle }) {
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function BasicRoute({ drizzle }) {
   }, []);
   return (
     <>
-      {loading && <h1>Loading Drizzle....</h1>}
+      {loading && <h1>Loading...</h1>}
       {!loading && drizzleState && (
         <Router>
           <Switch>
@@ -31,6 +33,9 @@ export default function BasicRoute({ drizzle }) {
             </Route>
             <Route path="/registration">
               <RegistrationPage drizzle={drizzle} drizzleState={drizzleState} />
+            </Route>
+            <Route path="/list">
+              <ListPage drizzle={drizzle} drizzleState={drizzleState} />
             </Route>
           </Switch>
         </Router>

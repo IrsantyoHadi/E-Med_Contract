@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
 
 //minting token
-contract IRSTKN is ERC20 {
-    constructor(uint256 initialSupply) ERC20("IRSTKN", "IRS") {
+contract XLCTKN is ERC20 {
+    constructor(uint256 initialSupply) ERC20("XellDoc Token", "XLC") {
         _mint(msg.sender, initialSupply);
     }
 
@@ -32,7 +32,7 @@ contract IRSICO {
     }
 
     constructor(address _token) {
-        token = IRSTKN(_token);
+        token = XLCTKN(_token);
         owner = msg.sender;
     }
 

@@ -3,7 +3,7 @@ const Token = artifacts.require('IRSTKN');
 
 module.exports = function (deployer) {
   deployer
-    .deploy(Token, 1000000)
+    .deploy(Token, 1000)
     .then(() => {
       return Token.address;
     })

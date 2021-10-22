@@ -6,11 +6,11 @@ import "./Token.sol";
 contract Emed {
     address private owner;
     uint256 private contractFee;
-    IRSTKN tokenIRS;
+    XLCTKN tokenXLC;
 
     constructor(address _tokenAdd) {
         owner = msg.sender;
-        tokenIRS = IRSTKN(_tokenAdd);
+        tokenXLC = XLCTKN(_tokenAdd);
         contractFee = 10;
     }
 
@@ -50,17 +50,13 @@ contract Emed {
     event CheckAmount(uint256 amount);
 
     struct MedicalRecord {
+        string doctorName;
         string subjective;
-        string objective;
         string assesment;
         string planning;
-        uint256 weight;
-        uint256 height;
-        uint256 systole;
-        uint256 diastole;
-        uint256 examDate;
-        string examLocation;
+        string doctor_notes;
         address doctorAddress;
+        uint256 examDate;
     }
 
     enum UserType {
@@ -90,8 +86,6 @@ contract Emed {
         address doctorAddress;
         address patientAddress;
         uint256 totalFee;
-        uint256 examDate;
-        Schedule examSchedule;
         bool active;
     }
 
@@ -124,8 +118,7 @@ contract Emed {
         string memory _name,
         uint256 _dob,
         UserType _userType,
-        uint256 _doctorFee,
-        Schedule[] memory _doctorSchedule
+        uint256 _doctorFee
     ) public onlyNewUser {
         User memory newUser;
         newUser.name = _name;
@@ -136,13 +129,13 @@ contract Emed {
         newUser.walletAddress = msg.sender;
         if (_userType == UserType.DOCTOR) {
             require(_doctorFee > contractFee, "Insert Higher Doctor Fee");
-            newUser.active = false;
+            newUser.active = true;
             newUser.doctorFee = _doctorFee;
-            doctor_schedule[msg.sender] = _doctorSchedule;
+            validDoctors.push(newUser);
         }
         registeredUsers[msg.sender] = newUser;
         require(
-            tokenIRS.approveFromContract(msg.sender, 100000) == true,
+            tokenXLC.approveFromContract(msg.sender, 100000) == true,
             "approve contract failed"
         );
         emit NewLog(msg.sender, block.timestamp, "register user");
@@ -156,24 +149,22 @@ contract Emed {
         emit NewLog(msg.sender, block.timestamp, "validate doctor");
     }
 
-    function createAppointment(
-        address _doctorAddress,
-        uint256 _examDate,
-        Schedule _examSchedule
-    ) public onlyPatient returns (uint256) {
+    function createAppointment(address _doctorAddress)
+        public
+        onlyPatient
+        returns (uint256)
+    {
         // find doctor to get fee
         User memory doctor = registeredUsers[_doctorAddress];
         emit CheckAmount(doctor.doctorFee);
 
         Appointment memory newAppointment;
         newAppointment.doctorAddress = _doctorAddress;
-        newAppointment.examDate = _examDate;
-        newAppointment.examSchedule = _examSchedule;
         newAppointment.totalFee = doctor.doctorFee;
         newAppointment.patientAddress = msg.sender;
         newAppointment.active = true;
         require(
-            tokenIRS.transferFrom(
+            tokenXLC.transferFrom(
                 msg.sender,
                 address(this),
                 doctor.doctorFee
@@ -204,7 +195,7 @@ contract Emed {
         emit CheckAmount(doctor.doctorFee);
         uint256 deductFee = doctor.doctorFee - contractFee;
         require(
-            tokenIRS.transfer(msg.sender, deductFee) == true,
+            tokenXLC.transfer(msg.sender, deductFee) == true,
             "Something Error with fee transfer"
         );
         require(
@@ -233,15 +224,10 @@ contract Emed {
     function addMedicalRecord(
         address _patientAddress,
         string memory _subjective,
-        string memory _objective,
         string memory _assesment,
         string memory _planning,
-        uint8 _weight,
-        uint8 _height,
-        uint8 _systole,
-        uint8 _diastole,
-        uint256 _examDate,
-        string memory _examLocation
+        string memory _doctorNotes,
+        uint256 _examDate
     ) public onlyDoctor {
         //this one is for chec if Patient is In Examination Prosess to prevent doctor do multiple adding
         require(
@@ -251,27 +237,23 @@ contract Emed {
         // after the condition pass status became false due the end of Examination proses
         patientExamStatus[_patientAddress] = false;
 
-        MedicalRecord memory newMedicalRecord;
-        newMedicalRecord.subjective = _subjective;
-        newMedicalRecord.objective = _objective;
-        newMedicalRecord.assesment = _assesment;
-        newMedicalRecord.planning = _planning;
-        newMedicalRecord.weight = _weight;
-        newMedicalRecord.height = _height;
-        newMedicalRecord.systole = _systole;
-        newMedicalRecord.diastole = _diastole;
-        newMedicalRecord.examDate = _examDate;
-        newMedicalRecord.examLocation = _examLocation;
-        newMedicalRecord.doctorAddress = msg.sender;
-        user_medicalRecords[_patientAddress].push(newMedicalRecord);
-
         // find doctor to get fee
         User memory doctor = registeredUsers[msg.sender];
+
+        MedicalRecord memory newMedicalRecord;
+        newMedicalRecord.subjective = _subjective;
+        newMedicalRecord.assesment = _assesment;
+        newMedicalRecord.planning = _planning;
+        newMedicalRecord.doctor_notes = _doctorNotes;
+        newMedicalRecord.examDate = _examDate;
+        newMedicalRecord.doctorAddress = msg.sender;
+        newMedicalRecord.doctorName = doctor.name;
+        user_medicalRecords[_patientAddress].push(newMedicalRecord);
 
         // deduct fee for contract owner
         uint256 amountPayedToDoctor = doctor.doctorFee - contractFee;
         require(
-            tokenIRS.transfer(msg.sender, amountPayedToDoctor) == true,
+            tokenXLC.transfer(msg.sender, amountPayedToDoctor) == true,
             "Payment not proceed!"
         );
         emit NewMedicalRecord(_patientAddress, msg.sender, block.timestamp);
